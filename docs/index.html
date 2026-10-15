@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentMotion — 纯代码视频生成框架</title>
+<style>
+  :root {
+    --bg: #0d0a14; --panel: #16102a; --ink: #f4ecff; --sub: #9d8fb8;
+    --accent: #c86bfa; --accent2: #ff7a59; --line: #2a2140;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--ink); line-height: 1.6;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+  header { padding: 72px 0 40px; text-align: center; }
+  .logo { font-size: 56px; font-weight: 800; letter-spacing: -1px; }
+  .logo em { font-style: normal; color: var(--accent); }
+  .tagline { margin-top: 12px; font-size: 18px; color: var(--sub); }
+  .hero-gif { display: block; margin: 32px auto; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.5); max-width: 480px; width: 100%; }
+  .cta { display: inline-flex; gap: 12px; margin-top: 8px; }
+  .btn {
+    display: inline-block; padding: 12px 22px; border-radius: 999px; font-weight: 600;
+    background: var(--accent); color: #fff; transition: transform .15s ease;
+  }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .btn:hover { transform: translateY(-2px); text-decoration: none; }
+  section { padding: 40px 0; border-top: 1px solid var(--line); }
+  h2 { font-size: 26px; margin-bottom: 20px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+  .card h3 { font-size: 16px; margin-bottom: 8px; }
+  .card p { font-size: 14px; color: var(--sub); }
+  .styles { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    font-size: 13px; padding: 5px 13px; border-radius: 999px;
+    background: var(--panel); border: 1px solid var(--line); color: var(--sub);
+  }
+  pre {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 20px; overflow-x: auto; font-size: 13px; color: #d8cdf0;
+  }
+  footer { padding: 40px 0 60px; text-align: center; color: var(--sub); font-size: 14px; }
+  @media (max-width: 640px) { .logo { font-size: 40px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="logo">Agent<em>Motion</em></div>
+    <div class="tagline">一句话出片 · 纯代码视频生成框架 &nbsp;|&nbsp; One prompt, one film — every frame drawn in code.</div>
+    <img class="hero-gif" src="assets/demo.gif" alt="AgentMotion demo">
+    <div class="cta">
+      <a class="btn" href="https://github.com/raymond9703/AgentMotion">GitHub 仓库</a>
+      <a class="btn ghost" href="#quickstart">快速开始</a>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>这是什么</h2>
+    <p>AgentMotion 是一个面向 AI Agent 的纯代码视频生成框架：让大模型用<strong>代码逐帧绘制</strong>并渲染出真正的 MP4——不生成素材、不调用扩散视频模型。每一帧都是帧号的纯函数 <code>frame = f(t)</code>，完全确定性：可自检、可并行、可复现。</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>核心能力</h2>
+    <div class="grid">
+      <div class="card"><h3>双渲染后端</h3><p>零素材单文件 Canvas（默认）+ React/Remotion（数据驱动、批量个性化、烧录字幕）。</p></div>
+      <div class="card"><h3>15 种商用级风格</h3><p>逐帧手绘 / 等轴 2.5D / 扁平矢量 / 线条 / 3D / 形变 / 贴纸科普 / 赛博 HUD / 拼贴 / 玻璃拟态 / 包豪斯 / Synthwave / 像素 / 液态 / 综艺花字。</p></div>
+      <div class="card"><h3>确定性渲染器</h3><p>一条命令出 MP4 / 指定时刻静帧 / contact sheet，多 worker 并行出帧。</p></div>
+      <div class="card"><h3>音画同源</h3><p>画面与配乐读同一份时间数据，切点天然落在节拍上。</p></div>
+      <div class="card"><h3>宿主无关</h3><p>既是 Agent Skill，也可被任意有 shell 的 Agent 调用，人也能当 CLI 用。</p></div>
+      <div class="card"><h3>开源（MIT）</h3><p>所有代码与文档原创，零素材承诺，欢迎 PR。</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>15 种风格一览</h2>
+    <div class="styles" id="styles"></div>
+  </div>
+</section>
+
+<section id="quickstart">
+  <div class="wrap">
+    <h2>快速开始</h2>
+    <pre><code># 环境体检（Node 18+ / ffmpeg / Chrome 或 Edge）
+node scripts/env-check.mjs
+npm i playwright-core
+
+# 跑通最小示例（8 秒）
+node scripts/render.mjs examples/hello-drop.html sheet.jpg --sheet 1
+node scripts/render.mjs examples/hello-drop.html out.mp4
+
+# 做你自己的片
+cp templates/starter.html my-film.html
+node scripts/render.mjs my-film.html preview.mp4 --workers 6
+node scripts/probe.mjs preview.mp4 1920x1080 30</code></pre>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    MIT © 2026 AgentMotion contributors · <a href="https://github.com/raymond9703/AgentMotion">github.com/raymond9703/AgentMotion</a>
+  </div>
+</footer>
+
+<script>
+  const styles = ["逐帧手绘","等轴 2.5D","扁平矢量","线条动画","3D 渲染","形变动画","贴纸科普","赛博朋克 HUD","拼贴剪贴","玻璃拟态","包豪斯几何","Synthwave 复古","像素风","液态流动","综艺花字"];
+  document.getElementById("styles").innerHTML = styles.map(s => `<span class="chip">${s}</span>`).join("");
+</script>
+</body>
+</html>
