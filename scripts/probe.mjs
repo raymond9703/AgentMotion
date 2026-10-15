@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** code2video — assert an MP4's codec/size/fps. usage: node probe.mjs out.mp4 [WxH] [fps] */
+/** AgentMotion — assert an MP4's codec/size/fps. usage: node probe.mjs out.mp4 [WxH] [fps] */
 import { spawnSync } from "node:child_process";
 
 const file = process.argv[2];

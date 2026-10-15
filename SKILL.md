@@ -1,11 +1,11 @@
 ---
-name: code2video
-description: 一句话出片 · 纯代码视频生成统一框架。用代码逐帧绘制并渲染出 MP4 —— 无素材、无 AI 视频模型、帧=f(t) 完全确定性。当用户要"用代码做视频""做一支动画/讲解片/宣传片/数据视频/风格目录片""逐帧绘制动画""把数据变成可分享视频""不知道用什么风格/技法"时使用。统一调度两种渲染后端（零素材 HTML Canvas / React+Remotion）、15 种商用级风格配方与完整质检循环。Not for editing existing video files, and not for diffusion-model video generation (Wan/Hunyuan/LTX).
+name: agent-motion
+description: 一句话出片 · 纯代码视频生成统一框架（AgentMotion）。用代码逐帧绘制并渲染出 MP4 —— 无素材、无 AI 视频模型、帧=f(t) 完全确定性。当用户要"用代码做视频""做一支动画/讲解片/宣传片/数据视频/风格目录片""逐帧绘制动画""把数据变成可分享视频""不知道用什么风格/技法"时使用。统一调度两种渲染后端（零素材 HTML Canvas / React+Remotion）、15 种商用级风格配方与完整质检循环。Not for editing existing video files, and not for diffusion-model video generation (Wan/Hunyuan/LTX).
 version: 1.0.0
 license: MIT
 ---
 
-# code2video — 纯代码视频生成统一框架
+# AgentMotion — 纯代码视频生成统一框架
 
 把"一句话"变成一支全部由代码绘制出来的 MP4。本技能是**编排层**：它帮你选后端、选风格、走流程、过质检；具体绘制知识在 `references/` 与 `styles/`。
 

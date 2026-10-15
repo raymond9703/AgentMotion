@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** code2video — environment check: node, ffmpeg, browser, playwright-core */
+/** AgentMotion — environment check: node, ffmpeg, browser, playwright-core */
 import { spawnSync } from "node:child_process";
 
 
@@ -23,8 +23,12 @@ try {
   if (pw) {
     const { chromium } = pw;
     let found = null;
-    for (const channel of ["chrome", "msedge"]) {
-      try { const b = await chromium.launch({ channel, headless: true }); found = channel; await b.close(); break; } catch {}
+    const opts = [];
+    const envPath = process.env.CHROME_PATH || process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+    if (envPath) opts.push({ executablePath: envPath });
+    for (const channel of ["chrome", "msedge"]) opts.push({ channel });
+    for (const o of opts) {
+      try { const b = await chromium.launch({ ...o, headless: true }); found = o.executablePath || o.channel; await b.close(); break; } catch {}
     }
     say("browser", !!found, found ? `${found} launches` : "no Chrome/Edge launchable");
   }

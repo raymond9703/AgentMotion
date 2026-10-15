@@ -6,7 +6,7 @@
 <body>
 <canvas id="film"></canvas>
 <script>
-/* code2video 最小示例：一滴墨落下，溅成一行字。8 秒 @30fps。*/
+/* AgentMotion 最小示例：一滴墨落下，溅成一行字。8 秒 @30fps。*/
 const FPS = 30, FRAMES = FPS * 8;
 window.C2V = { fps: FPS, frames: FRAMES, width: 1920, height: 1080, draw };
 window.CUES = [{ frame: 0, name: "in" }, { frame: FPS * 1, name: "drop" }, { frame: FPS * 2, name: "splash" }];

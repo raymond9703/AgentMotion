@@ -1,5 +1,5 @@
 {
-  "name": "code2video",
+  "name": "agent-motion",
   "version": "1.0.0",
   "description": "One prompt, one film — agent skill that draws every frame in code and renders deterministic MP4s",
   "type": "module",

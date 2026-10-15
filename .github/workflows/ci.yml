@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: browser-actions/setup-chrome@v1
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Environment check
+        run: node scripts/env-check.mjs
+
+      - name: Render demo film
+        run: node scripts/render.mjs examples/hello-drop.html out/demo.mp4 --workers 2
+
+      - name: Assert encode
+        run: node scripts/probe.mjs out/demo.mp4 1920x1080 30

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * code2video — deterministic renderer
+ * AgentMotion — deterministic renderer
  *
  * Contract: the page must expose
  *   window.C2V = { fps, frames, width, height, draw(frame) }
@@ -39,6 +39,7 @@ const audio      = args.includes("--audio") ? flag("--audio", "") : null;
 const absInput = path.resolve(input);
 const absOutput = path.resolve(output);
 if (!fs.existsSync(absInput)) { console.error(`input not found: ${absInput}`); process.exit(2); }
+fs.mkdirSync(path.dirname(absOutput), { recursive: true });
 
 // ---------- helpers ----------
 function run(cmd, cmdArgs, opts = {}) {
@@ -52,11 +53,17 @@ function run(cmd, cmdArgs, opts = {}) {
 const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "c2v-"));
 
 async function launch() {
-  for (const channel of ["chrome", "msedge", "chrome-beta", "edge"]) {
-    try { return await chromium.launch({ channel, headless: true }); }
-    catch { /* try next */ }
+  const opts = [];
+  const envPath = process.env.CHROME_PATH || process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+  if (envPath) opts.push({ executablePath: envPath });
+  for (const channel of ["chrome", "msedge", "chrome-beta", "edge"]) opts.push({ channel });
+  for (const o of opts) {
+    for (const extra of [{}, { args: ["--no-sandbox"] }]) {
+      try { return await chromium.launch({ ...o, ...extra, headless: true }); }
+      catch { /* try next */ }
+    }
   }
-  console.error("No Chrome/Edge found. Install one, or pass playwright chromium executable.");
+  console.error("No Chrome/Edge found. Install one, or set CHROME_PATH.");
   process.exit(1);
 }
 
