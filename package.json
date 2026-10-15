@@ -1,0 +1,14 @@
+{
+  "name": "code2video",
+  "version": "1.0.0",
+  "description": "One prompt, one film — agent skill that draws every frame in code and renders deterministic MP4s",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "env": "node scripts/env-check.mjs",
+    "demo": "node scripts/render.mjs examples/hello-drop.html out/demo.mp4 --workers 4"
+  },
+  "dependencies": {
+    "playwright-core": "^1.64.1"
+  }
+}

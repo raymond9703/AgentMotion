@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>code2video starter</title>
+<style>
+  html,body{margin:0;padding:0;background:#000;overflow:hidden}
+  canvas{display:block}
+</style>
+</head>
+<body>
+<canvas id="film"></canvas>
+<script>
+/* ============================================================
+ * code2video starter — 帧 = f(t) 确定性骨架
+ * 契约：window.C2V = { fps, frames, width, height, draw(frame) }
+ * draw 是纯函数：同一帧号永远画出同一画面。
+ * 禁止：Math.random / Date.now / rAF 累积状态 / CSS 动画参与画面。
+ * ============================================================ */
+
+// ---------- 0. 影片配置（改成你的） ----------
+const FPS    = 30;
+const BPM    = 96;                       // 音乐节拍；切点落在整拍上
+const SECTIONS = [                       // 段落：每段整数个小节，保证切点在强拍
+  { name: "opening", start: 0,   bars: 2 },
+  { name: "main",    start: 4,   bars: 6 },
+  { name: "ending",  start: 16,  bars: 2 },
+];
+const beatsPerSec = BPM / 60;
+const sec = (beat) => beat / beatsPerSec;
+const TOTAL_SECONDS = SECTIONS.reduce((s, x) => s + x.bars * 4, 0) / beatsPerSec;
+
+window.C2V = {
+  fps: FPS,
+  frames: Math.round(TOTAL_SECONDS * FPS),
+  width: 1920,
+  height: 1080,
+  draw,                                 // 函数声明提升，见文件底部
+};
+
+// ---------- 1. 确定性工具 ----------
+function rng(seed) {                    // mulberry32 — 种子随机，替代 Math.random
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const hash2 = (x, y) => rng(x * 374761393 + y * 668265263)();
+
+// ---------- 2. 缓动与节拍 ----------
+const clamp01 = (x) => Math.min(1, Math.max(0, x));
+const E = {
+  linear: t => t,
+  outCubic: t => 1 - Math.pow(1 - t, 3),
+  inOutCubic: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2,
+  outBack: (t, s = 1.5) => 1 + (s+1)*Math.pow(t-1,3) + s*Math.pow(t-1,2),
+  outElastic: t => t === 0 ? 0 : t === 1 ? 1 :
+    Math.pow(2, -10*t) * Math.sin((t*10 - 0.75) * (2*Math.PI/3)) + 1,
+};
+/** 在 [t0,t1] 内求进度 0..1（自动 clamp） */
+const during = (f, f0, f1) => clamp01((f - f0) / Math.max(1, f1 - f0));
+/** 手绘沸腾：种子每 BOIL 帧一换（≈7.5 次/秒读作手绘，每帧一换读作噪声） */
+const BOIL = 4;
+const boilSeed = (key, f) => Math.floor(f / BOIL) * 7 + hash2(0, key.length) * 100 | 0;
+
+// ---------- 3. 相机：世界坐标 → 屏幕坐标 ----------
+function withCamera(ctx, cam, fn) {
+  // cam = {x, y, zoom, rot}  —— 每个镜头给一份，镜头内用世界坐标绘制
+  ctx.save();
+  ctx.translate(ctx.canvas.width / 2, ctx.canvas.height / 2);
+  ctx.rotate(cam.rot || 0);
+  ctx.scale(cam.zoom || 1, cam.zoom || 1);
+  ctx.translate(-cam.x, -cam.y);
+  fn();
+  ctx.restore();
+}
+
+// ---------- 4. 分镜数据（把 SHOTS 改成你的镜头表） ----------
+const SHOTS = [
+  // 每个镜头：起止帧 / 相机 / 绘制内容名 / 落点事件
+  { t0: 0,   t1: 120, cam: { x: 960, y: 540, zoom: 1.0 }, world: "titleWorld",  event: "beat-in" },
+  { t0: 120, t1: 360, cam: { x: 960, y: 540, zoom: 1.2 }, world: "mainWorld",   event: "story" },
+  { t0: 360, t1: 480, cam: { x: 960, y: 540, zoom: 1.0 }, world: "endWorld",    event: "outro" },
+];
+const EVENTS = [{ frame: 0, name: "beat-in" }, { frame: 120, name: "cut-main" }, { frame: 360, name: "cut-out" }];
+window.CUES = EVENTS; // 供配乐 sync / sync-check 使用
+
+// ---------- 5. 调色板占位（换掉它——两支片子默认不复用同一视觉） ----------
+const PALETTE = {
+  bg: "#101418", ink: "#F2EFE6", accent: "#E4572E", soft: "#7C8691",
+};
+
+// ---------- 6. 世界绘制（替换为你的内容） ----------
+function titleWorld(ctx, f, p) {        // p = 镜头内进度 0..1
+  const k = E.outCubic(during(f, 6, 40));
+  ctx.fillStyle = PALETTE.ink;
+  ctx.font = "700 120px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.globalAlpha = k;
+  ctx.fillText("用代码，逐帧画一部片", 0, -20 + (1 - k) * 40);
+  ctx.globalAlpha = 1;
+}
+function mainWorld(ctx, f, p) {
+  // 示例：一颗弹性小球 + 种子噪声点缀 —— 换成你的世界
+  const r = 120;
+  const y = -300 + Math.abs(Math.sin(p * Math.PI * 3)) * 500 * (1 - 0.2);
+  const sq = 1 + 0.15 * Math.cos(p * Math.PI * 6);
+  ctx.fillStyle = PALETTE.accent;
+  ctx.beginPath();
+  ctx.ellipse(0, y, r * sq, r / sq, 0, 0, Math.PI * 2);
+  ctx.fill();
+  const rand = rng(boilSeed(7, f));
+  ctx.fillStyle = PALETTE.soft;
+  for (let i = 0; i < 24; i++) {
+    ctx.globalAlpha = 0.15 + 0.2 * rand();
+    ctx.beginPath();
+    ctx.arc((rand() - .5) * 1600, (rand() - .5) * 800, 4 + rand() * 10, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+function endWorld(ctx, f, p) {
+  const k = E.outCubic(during(f, 0, 36));
+  ctx.fillStyle = PALETTE.ink;
+  ctx.font = "700 96px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.globalAlpha = k;
+  ctx.fillText("帧 = f(t)", 0, 0);
+  ctx.font = "400 44px system-ui, sans-serif";
+  ctx.fillText("every frame a pure function", 0, 90);
+  ctx.globalAlpha = 1;
+}
+const WORLDS = { titleWorld, mainWorld, endWorld };
+
+// ---------- 7. 主绘制入口（契约） ----------
+function draw(frame) {
+  const ctx = document.getElementById("film").getContext("2d");
+  const shot = SHOTS.find(s => frame >= s.t0 && frame < s.t1) || SHOTS[SHOTS.length - 1];
+  const p = during(frame, shot.t0, shot.t1);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = PALETTE.bg;
+  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  withCamera(ctx, shot.cam, () => (WORLDS[shot.world] || (() => {}))(ctx, frame, p));
+  // 转场：跨镜头交叉溶解（0.6s）
+  const FADE = Math.round(FPS * 0.6);
+  if (frame - shot.t0 < FADE && shot.t0 > 0) {
+    const prev = SHOTS[SHOTS.indexOf(shot) - 1];
+    const pp = during(frame, prev.t0, prev.t1);
+    ctx.globalAlpha = 1 - (frame - shot.t0) / FADE;
+    withCamera(ctx, prev.cam, () => (WORLDS[prev.world] || (() => {}))(ctx, frame, pp));
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ---------- 8. 装配 ----------
+const cv = document.getElementById("film");
+cv.width = window.C2V.width; cv.height = window.C2V.height;
+// 预览模式（无 ?t 无渲染器时自动播放）；渲染器直接调 C2V.draw(frame)，忽略此段
+if (!new URLSearchParams(location.search).has("still")) {
+  let f = 0;
+  (function loop() { draw(f = (f + 1) % window.C2V.frames); requestAnimationFrame(loop); })();
+}
+</script>
+</body>
+</html>

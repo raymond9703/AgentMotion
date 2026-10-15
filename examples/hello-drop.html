@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head><meta charset="utf-8"><title>hello, drop</title>
+<style>html,body{margin:0;overflow:hidden;background:#0d0a14}canvas{display:block}</style>
+</head>
+<body>
+<canvas id="film"></canvas>
+<script>
+/* code2video 最小示例：一滴墨落下，溅成一行字。8 秒 @30fps。*/
+const FPS = 30, FRAMES = FPS * 8;
+window.C2V = { fps: FPS, frames: FRAMES, width: 1920, height: 1080, draw };
+window.CUES = [{ frame: 0, name: "in" }, { frame: FPS * 1, name: "drop" }, { frame: FPS * 2, name: "splash" }];
+
+const rng = s => { let a = s >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0;
+  let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+  return ((t ^ t >>> 14) >>> 0) / 4294967296; }; };
+const ease = t => 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
+const during = (f, a, b) => Math.min(1, Math.max(0, (f - a) / (b - a)));
+
+const PAL = { bg: "#0d0a14", drop: "#c86bfa", drop2: "#ff7a59", text: "#f4ecff" };
+
+function draw(frame) {
+  const c = document.getElementById("film");
+  c.width === window.C2V.width || (c.width = window.C2V.width, c.height = window.C2V.height);
+  const ctx = c.getContext("2d");
+  const f = frame, t = f / FPS;
+
+  // 背景：缓慢的紫夜
+  const g = ctx.createLinearGradient(0, 0, 0, 1080);
+  g.addColorStop(0, "#16102a"); g.addColorStop(1, PAL.bg);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 1920, 1080);
+
+  // 1) 一滴从顶部坠落（0.3s 起）
+  const dropP = during(f, 9, FPS * 1.0);
+  if (dropP < 1) {
+    const y = -80 + ease(dropP) * 560;                 // 重力加速
+    const stretch = 1 + ease(dropP) * 0.6;
+    ctx.fillStyle = PAL.drop;
+    ctx.beginPath(); ctx.ellipse(960, y, 26, 26 * stretch, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,.5)";
+    ctx.beginPath(); ctx.ellipse(952, y - 8, 7, 11, 0, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // 2) 溅落（1.0s）：涟漪 + 液滴散开
+  const splash = during(f, FPS, FPS * 2.2);
+  if (splash > 0 && splash < 1) {
+    for (let i = 0; i < 3; i++) {
+      const rp = Math.max(0, (splash - i * 0.12) / 0.88);
+      if (rp <= 0 || rp >= 1) continue;
+      ctx.strokeStyle = PAL.drop; ctx.globalAlpha = 1 - rp;
+      ctx.lineWidth = 6 * (1 - rp) + 1;
+      ctx.beginPath(); ctx.ellipse(960, 620 + i * 6, 40 + rp * (260 + i * 90), (40 + rp * (260 + i * 90)) * 0.24, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    const rand = rng(1234);
+    for (let i = 0; i < 14; i++) {                     // 溅起的小滴（确定性）
+      const bp = during(f, FPS, FPS * 1.7);
+      if (bp <= 0) break;
+      const vx = (rand() - .5) * 700, vy = -(200 + rand() * 420);
+      const x = 960 + vx * bp, y = 600 + vy * bp + 900 * bp * bp;
+      const a = 1 - bp;
+      if (a > 0) { ctx.globalAlpha = a; ctx.fillStyle = i % 3 ? PAL.drop : PAL.drop2;
+        ctx.beginPath(); ctx.arc(x, y, 4 + rand() * 7, 0, Math.PI * 2); ctx.fill(); }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // 3) 字浮现（1.8s 起）：万物始于一滴
+  const tp = ease(during(f, FPS * 1.8, FPS * 2.6));
+  if (tp > 0) {
+    ctx.globalAlpha = tp;
+    ctx.textAlign = "center";
+    ctx.fillStyle = PAL.text;
+    ctx.font = "700 88px system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif";
+    ctx.fillText("万 物 始 于 一 滴", 960, 850 + (1 - tp) * 30);
+    ctx.font = "400 30px system-ui, sans-serif";
+    ctx.fillStyle = "#9d8fb8";
+    ctx.fillText("E V E R Y T H I N G   B E G I N S   A S   A   D R O P", 960, 910 + (1 - tp) * 20);
+    ctx.globalAlpha = 1;
+  }
+
+  // 结尾轻淡出（7.2s 起）
+  const out = during(f, FPS * 7.2, FRAMES);
+  if (out > 0) { ctx.fillStyle = PAL.bg; ctx.globalAlpha = out; ctx.fillRect(0, 0, 1920, 1080); ctx.globalAlpha = 1; }
+}
+// 浏览器直接打开时自动预览；渲染器（带 ?still=1）走 C2V.draw(frame)
+if (!new URLSearchParams(location.search).has("still")) {
+  let f = 0; (function loop() { draw(f = (f + 1) % FRAMES); requestAnimationFrame(loop); })();
+}
+</script>
+</body>
+</html>
